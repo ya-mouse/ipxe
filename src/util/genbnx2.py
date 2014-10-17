@@ -54,14 +54,6 @@ def print_struct(name, rev, data):
     print_data(data)
     sys.stdout.write('\n};\n')
 
-# List of MIPS firmware names and type
-mips = (
-    ('com',  'L'),
-    ('rxp',  'L'),
-    ('tpat', 'L'),
-    ('txp',  'L'),
-)
-
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         print('Usage: genbnx2 option.rom REV-NUMBER [-v]')
