@@ -17,7 +17,7 @@ types = (
 )
 
 # Search for proper FW header location
-def get_header(content, offset):
+def get_header(item, content, offset):
     for t in types:
         hdr = unpack(t[1], content[offset-t[0]:offset])
         # hdr[3] -- entry point address
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         max_offset = max(max_offset, start_off)
 
         # Parse FW header
-        hdr = get_header(content, start_off)
+        hdr = get_header(item, content, start_off)
         if hdr is None:
             sys.stderr.write('Unable to find header for MIPS firmware: %s\n' % item)
             has_error = True
