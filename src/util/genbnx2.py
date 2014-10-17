@@ -2,10 +2,32 @@
 from struct import unpack, pack
 import sys
 
-types = {
-    'H':  [ 0x2e, '<3H2IHI2H2IHIHIH' ],
-    'L':  [ 0x28, '<3H2IHI2H2IHIH' ],
-}
+types = (
+    ( 0x2e, '<3H2IHI2H2IHIHIH' ),
+    ( 0x28, '<3H2IHI2H2IHIH' ),
+)
+
+# Search for proper FW header location
+def get_header(content, offset):
+    for t in types:
+        hdr = unpack(t[1], content[offset-t[0]:offset])
+        # hdr[3] -- entry point address
+        # hdr[4] -- .text.addr field
+        # hdr[5] -- .text.len field
+        if ((hdr[3] & 0x08000000) != 0x08000000 or
+           (hdr[4] & 0x08000000) != 0x08000000):
+            continue
+        if verbose:
+            sys.stderr.write('--> FW %s: (%08x,%08x,%x)\n\t' % (item, hdr[3], hdr[4], hdr[5]))
+            i = 1
+            for b in hdr:
+                sys.stderr.write('%x ' % b)
+                if i % 6 == 0:
+                    sys.stderr.write('\n\t')
+                i += 1
+            sys.stderr.write('\n')
+        return hdr
+    return None
 
 def print_data(data):
     i = 1
@@ -22,29 +44,29 @@ def print_struct(name, rev, data):
 
 # List of MIPS firmware names and type
 mips = (
-    ('com',  'H'),
-    ('rxp',  'H'),
+    ('com',  'L'),
+    ('rxp',  'L'),
     ('tpat', 'L'),
     ('txp',  'L'),
 )
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print('Usage: genbnx2 option.rom REV-NUMBER')
+    if len(sys.argv) < 3:
+        print('Usage: genbnx2 option.rom REV-NUMBER [-v]')
         sys.exit(1)
 
     f = open(sys.argv[1], 'rb')
     content = f.read()
     rev = sys.argv[2]
+    verbose = len(sys.argv) == 4 and sys.argv[3] == '-v'
 
     offset = 0xa0
     data = []
     hdrs = []
     max_offset = 0
     has_error = False
-    for item,prop in mips:
+    for item in ('com','rxp','tpat','txp'):
         # Reverse FW name (BE order) and pad to 4 chars with space
-        t = types[prop]
         key = bytes(('%-4s' % item)[::-1], 'ascii')
 
         # Matched FW name is at `-0x10' offset from the beginning
@@ -58,20 +80,18 @@ if __name__ == '__main__':
 
         max_offset = max(max_offset, start_off)
 
-        # Parse FW header. It is at `-0x2e' or `-0x28'.
-        hdr = unpack(t[1], content[start_off-t[0]:start_off])
-        # Entry point address
-        start = hdr[3]
-        # .text.addr field
-        text_addr = hdr[4]
-        # .text.len field
-        text_len  = hdr[5]
+        # Parse FW header
+        hdr = get_header(content, start_off)
+        if hdr is None:
+            sys.stderr.write('Unable to find header for MIPS firmware: %s\n' % item)
+            has_error = True
+            continue
         # Push header data in BE order
         hdrs.extend(unpack('<4I', pack('>4I', hdr[3], hdr[4], hdr[5], offset)))
         hdrs.extend((0,)*6)
         # Push firmware data in BE order
-        data.extend(unpack('>%dI' % (text_len >> 2), content[start_off:start_off+text_len]))
-        offset += text_len
+        data.extend(unpack('>%dI' % (hdr[5] >> 2), content[start_off:start_off+hdr[5]]))
+        offset += hdr[5]
 
     if has_error:
         sys.exit(255)
