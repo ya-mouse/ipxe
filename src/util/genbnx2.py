@@ -23,9 +23,8 @@ def get_header(content, offset):
         # hdr[3] -- entry point address
         # hdr[4] -- .text.addr field
         # hdr[5] -- .text.len field
-        # Checking for address values. Address should start at 0x08000000
-        if ((hdr[3] & 0x08000000) != 0x08000000 or
-            (hdr[4] & 0x08000000) != 0x08000000):
+        # Checking for address values. Address should start from 0x08000000
+        if not (hdr[3] & 0x08000000) or not (hdr[4] & 0x08000000):
             continue
         if verbose:
             sys.stderr.write('--> FW %s: (%08x,%08x,%x)\n\t' % (item, hdr[3], hdr[4], hdr[5]))
@@ -102,12 +101,12 @@ if __name__ == '__main__':
     if has_error:
         sys.exit(255)
 
-    # Search for RV2P file offset (at least 0x50 zeroes and 0x0800000,0x010000ac)
+    # Search for RV2P file offset (at least 0x50 zeroes and 0x0800000,0x010000ac dword)
     file_offset = content[max_offset:].find(bytes((0x00,)*0x50 + (8,0,0,0) + (1,0,0,0xac)))
     if file_offset < 0:
         sys.stderr.write('Unable to find RV2P firmware beggining sequence\n')
         sys.exit(255)
-    # Make file offset to RV2P FW from content's beggining
+    # Make file offset to RV2P FW from the content's beggining
     file_offset += max_offset + 0x50
 
     # Check for RV2P size by asm opcodes
