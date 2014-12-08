@@ -66,19 +66,30 @@ struct efi_snp_device {
 	wchar_t driver_name[16];
 	/** Controller name */
 	wchar_t controller_name[64];
-	/** The device path
-	 *
-	 * This field is variable in size and must appear at the end
-	 * of the structure.
-	 */
-	EFI_DEVICE_PATH_PROTOCOL path;
+	/** The device path */
+	EFI_DEVICE_PATH_PROTOCOL *path;
 };
 
 extern int efi_snp_hii_install ( struct efi_snp_device *snpdev );
 extern void efi_snp_hii_uninstall ( struct efi_snp_device *snpdev );
 extern struct efi_snp_device * find_snpdev ( EFI_HANDLE handle );
 extern struct efi_snp_device * last_opened_snpdev ( void );
-extern void efi_snp_claim ( void );
-extern void efi_snp_release ( void );
+extern void efi_snp_set_claimed ( int claimed );
+
+/**
+ * Claim network devices for use by iPXE
+ *
+ */
+static inline void efi_snp_claim ( void ) {
+	efi_snp_set_claimed ( 1 );
+}
+
+/**
+ * Release network devices for use via SNP
+ *
+ */
+static inline void efi_snp_release ( void ) {
+	efi_snp_set_claimed ( 0 );
+}
 
 #endif /* _IPXE_EFI_SNP_H */

@@ -60,10 +60,6 @@ FILE_LICENCE ( GPL2_OR_LATER );
 #include <ipxe/efi/efi_snp.h>
 #include <ipxe/efi/efi_strings.h>
 
-/** EFI configuration access protocol GUID */
-static EFI_GUID efi_hii_config_access_protocol_guid
-	= EFI_HII_CONFIG_ACCESS_PROTOCOL_GUID;
-
 /** EFI platform setup formset GUID */
 static EFI_GUID efi_hii_platform_setup_formset_guid
 	= EFI_HII_PLATFORM_SETUP_FORMSET_GUID;
@@ -649,8 +645,10 @@ int efi_snp_hii_install ( struct efi_snp_device *snpdev ) {
 	int rc;
 
 	/* Do nothing if HII database protocol is not supported */
-	if ( ! efihii )
-		return 0;
+	if ( ! efihii ) {
+		rc = -ENOTSUP;
+		goto err_no_hii;
+	}
 
 	/* Initialise HII protocol */
 	memcpy ( &snpdev->hii, &efi_snp_device_hii, sizeof ( snpdev->hii ) );
@@ -697,6 +695,7 @@ int efi_snp_hii_install ( struct efi_snp_device *snpdev ) {
 	free ( snpdev->package_list );
 	snpdev->package_list = NULL;
  err_build_package_list:
+ err_no_hii:
 	return rc;
 }
 

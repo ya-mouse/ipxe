@@ -175,7 +175,7 @@ static int efi_bofm_supported ( EFI_HANDLE device ) {
 	/* Look for a BOFM driver */
 	if ( ( rc = bofm_find_driver ( &pci ) ) != 0 ) {
 		DBGCP ( device, "EFIBOFM %p %s has no driver\n",
-			device, efi_handle_devpath_text ( device ) );
+			device, efi_handle_name ( device ) );
 		return rc;
 	}
 
@@ -184,7 +184,7 @@ static int efi_bofm_supported ( EFI_HANDLE device ) {
 					    &bofm1.interface ) ) != 0 ) {
 		rc = -EEFI ( efirc );
 		DBGC ( device, "EFIBOFM %p %s cannot find BOFM protocol\n",
-		       device, efi_handle_devpath_text ( device ) );
+		       device, efi_handle_name ( device ) );
 		return rc;
 	}
 
@@ -195,13 +195,12 @@ static int efi_bofm_supported ( EFI_HANDLE device ) {
 						      0x02 /* Version */ ))!=0){
 		rc = -EEFI ( efirc );
 		DBGC ( device, "EFIBOFM %p %s could not register support: %s\n",
-		       device, efi_handle_devpath_text ( device ),
-		       strerror ( rc ) );
+		       device, efi_handle_name ( device ), strerror ( rc ) );
 		return rc;
 	}
 
 	DBGC ( device, "EFIBOFM %p %s has driver \"%s\"\n",
-	       device, efi_handle_devpath_text ( device ), pci.id->name );
+	       device, efi_handle_name ( device ), pci.id->name );
 	return 0;
 }
 
@@ -239,12 +238,12 @@ static int efi_bofm_start ( struct efi_device *efidev ) {
 					    &bofm1.interface ) ) != 0 ) {
 		rc = -EEFI ( efirc );
 		DBGC ( device, "EFIBOFM %p %s cannot find BOFM protocol\n",
-		       device, efi_devpath_text ( efidev->path ) );
+		       device, efi_handle_name ( device ) );
 		goto err_locate_bofm;
 	}
 	bofmtab = &bofm1.bofm1->BofmTable;
 	DBGC ( device, "EFIBOFM %p %s found version 1 BOFM table at %p+%04x\n",
-	       device, efi_devpath_text ( efidev->path ), bofmtab,
+	       device, efi_handle_name ( device ), bofmtab,
 	       bofmtab->Parameters.Length );
 
 	/* Locate BOFM2 protocol, if available */
@@ -252,35 +251,35 @@ static int efi_bofm_start ( struct efi_device *efidev ) {
 					    &bofm2.interface ) ) == 0 ) {
 		bofmtab2 = &bofm2.bofm2->BofmTable;
 		DBGC ( device, "EFIBOFM %p %s found version 2 BOFM table at "
-		       "%p+%04x\n", device, efi_devpath_text ( efidev->path ),
+		       "%p+%04x\n", device, efi_handle_name ( device ),
 		       bofmtab2, bofmtab2->Parameters.Length );
 		assert ( bofm2.bofm2->RegisterSupport ==
 			 bofm1.bofm1->RegisterSupport );
 	} else {
 		DBGC ( device, "EFIBOFM %p %s cannot find BOFM2 protocol\n",
-		       device, efi_devpath_text ( efidev->path ) );
+		       device, efi_handle_name ( device ) );
 		/* Not a fatal error; may be a BOFM1-only system */
 		bofmtab2 = NULL;
 	}
 
 	/* Process BOFM table */
 	DBGC2 ( device, "EFIBOFM %p %s version 1 before processing:\n",
-		device, efi_devpath_text ( efidev->path ) );
+		device, efi_handle_name ( device ) );
 	DBGC2_HD ( device, bofmtab, bofmtab->Parameters.Length );
 	if ( bofmtab2 ) {
 		DBGC2 ( device, "EFIBOFM %p %s version 2 before processing:\n",
-			device, efi_devpath_text ( efidev->path ) );
+			device, efi_handle_name ( device ) );
 		DBGC2_HD ( device, bofmtab2, bofmtab2->Parameters.Length );
 	}
 	bofmrc = bofm ( virt_to_user ( bofmtab2 ? bofmtab2 : bofmtab ), &pci );
 	DBGC ( device, "EFIBOFM %p %s status %08x\n",
-	       device, efi_devpath_text ( efidev->path ), bofmrc );
+	       device, efi_handle_name ( device ), bofmrc );
 	DBGC2 ( device, "EFIBOFM %p %s version 1 after processing:\n",
-		device, efi_devpath_text ( efidev->path ) );
+		device, efi_handle_name ( device ) );
 	DBGC2_HD ( device, bofmtab, bofmtab->Parameters.Length );
 	if ( bofmtab2 ) {
 		DBGC2 ( device, "EFIBOFM %p %s version 2 after processing:\n",
-			device, efi_devpath_text ( efidev->path ) );
+			device, efi_handle_name ( device ) );
 		DBGC2_HD ( device, bofmtab2, bofmtab2->Parameters.Length );
 	}
 
@@ -290,9 +289,8 @@ static int efi_bofm_start ( struct efi_device *efidev ) {
 							FALSE, bofmrc ) ) != 0){
 			rc = -EEFI ( efirc );
 			DBGC ( device, "EFIBOFM %p %s could not set BOFM2 "
-			       "status: %s\n",
-			       device, efi_devpath_text ( efidev->path ),
-			       strerror ( rc ) );
+			       "status: %s\n", device,
+			       efi_handle_name ( device ), strerror ( rc ) );
 			goto err_set_status;
 		}
 	} else {
@@ -300,9 +298,8 @@ static int efi_bofm_start ( struct efi_device *efidev ) {
 							FALSE, bofmrc ) ) != 0){
 			rc = -EEFI ( efirc );
 			DBGC ( device, "EFIBOFM %p %s could not set BOFM "
-			       "status: %s\n",
-			       device, efi_devpath_text ( efidev->path ),
-			       strerror ( rc ) );
+			       "status: %s\n", device,
+			       efi_handle_name ( device ), strerror ( rc ) );
 			goto err_set_status;
 		}
 	}
